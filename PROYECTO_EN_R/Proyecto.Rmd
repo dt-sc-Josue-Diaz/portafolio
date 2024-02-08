@@ -1,0 +1,156 @@
+---
+title: "Proyecto"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Integrantes
+
+-Nancy Mejía Dominguez
+-Norma Angélica Zúñiga Pacheco
+-Margarita Palacios A.
+-Israel Sandoval Grajeda
+-Alejandro Núñez Vilchis
+-Luis Josue Díaz Alvarez
+-Cristina Pérez Martínez
+-Vanesa Domínguez Esquivel
+
+
+Cargar librerias
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(readr)
+library(ggplot2)
+```
+
+## 1. Cargar base
+```{r}
+setwd(".")
+datos=read.csv2("baseball_raw.csv", header=T)
+View(datos)
+str(datos)
+```
+
+## 2. Ordenar base de datos
+```{r}
+datos_ordenados<-datos%>% 
+    pivot_longer(X1:X1232,
+                 names_to="Observaciones",
+                 values_to="Valor") %>% 
+    pivot_wider(names_from=X, values_from=Valor)%>%
+    select(Observaciones:OSLG)%>%
+    select(!RankSeason & !RankPlayoffs)%>% #Eliminación de RankSeason y RankPlayoffs
+    drop_na() #Eliminación de valores faltantes
+#Ajustando los tipos de datos
+datos_ordenados$RS <- as.integer(datos_ordenados$RS)
+datos_ordenados$RA <- as.integer(datos_ordenados$RA)
+datos_ordenados$W <- as.integer(datos_ordenados$W)
+datos_ordenados$Playoffs <- as.integer(datos_ordenados$Playoffs)
+datos_ordenados$Playoffs <- as.logical(datos_ordenados$Playoffs)
+datos_ordenados$G <- as.integer(datos_ordenados$G)
+datos_ordenados$OBP <- as.double(datos_ordenados$OBP)
+datos_ordenados$SLG <- as.double(datos_ordenados$SLG)
+datos_ordenados$BA <- as.double(datos_ordenados$BA)
+datos_ordenados$OOBP <- as.double(datos_ordenados$OOBP)
+datos_ordenados$OSLG <- as.double(datos_ordenados$OSLG)
+datos_ordenados <- na.omit(datos_ordenados)
+View(datos_ordenados)
+str(datos_ordenados)
+
+```
+
+4. Utilizar la variable de carreras anotadas para detectar y eliminar los outliers de la base
+```{r}
+#Identificación de outliers
+#RS_numerica=as.numeric(datos_ordenados$RS)
+#ggplot(data=datos_ordenados, aes(y=RS_numerica))+
+#  geom_boxplot()
+#boxplot(RS_numerica)$out
+outliers <- boxplot(datos_ordenados$RS)$out
+#Eliminación de outliers
+#datos_ordenados=datos_ordenados%>%
+ #mutate(RS=as.numeric(RS))%>%
+ #filter(RS>513,RS_numerica<978)
+datos_ordenados <- filter(datos_ordenados, !RS %in% c(outliers))
+
+View(datos_ordenados)
+str(datos_ordenados)
+
+#Generar base ordenada y limpia
+write.csv(datos_ordenados, "baseball ordenada.csv") 
+```
+
+## Análisis exploratorio
+Cargar base
+```{r}
+datos1<-read.csv("baseball ordenada.csv", header=T)
+
+```
+
+¿Qué tipo de variables contiene la base?
+```{r}
+str(datos1)
+summary(datos1)
+```
+
+¿Cuántos equipos hay por liga?
+```{r}
+datos1%>%
+ group_by(League)%>%
+ count(Team)%>%
+ mutate(id=row_number(),.before=League)%>%
+ summarise(equiposXliga=length(id))
+
+```
+
+¿Existe relación entre el equipo y el número de victorias por año?
+```{r}
+ggplot(datos1, aes(x=Team, y=W))+
+  geom_point(color="darkblue")+
+  labs(title="Relación entre el equipo y numero de victorias por año",
+       x="Equipo",
+       y="Número de victorias por año")
+```
+
+¿Hay relación entre las ejecuciones permitidas y la liga?
+```{r}
+ggplot(datos1, aes(x=League, y=RA))+
+  geom_point(color="darkorange")+
+  labs(title="Relación entre las ejecuciones permitidas y la liga",
+       x="Liga",
+       y="Ejecuciones permitidas")
+```
+
+¿La distribución del promedio de bateo cambia de acuerdo a la liga?.
+```{r}
+ggplot(datos1, aes(x=BA))+
+  geom_histogram(aes(fill=League), alpha=0.5)+
+  labs(title="Distribución del promedio de bateo cambia de acuerdo a la liga",
+       x="Promedio de bateo",
+       fill = "Liga")+
+   scale_fill_brewer(palette = "Dark2")
+
+```
+
+¿El porcentaje base del oponente está relacionado con las victorias?
+```{r}
+ggplot(datos1, aes(x=OOBP, y=W))+
+  geom_point(color="darkred")+
+  labs(title="Relación entre el porcentaje en base del oponente y las victorias",
+       x="Porcentaje en base del oponenete",
+       y="Victorias")
+```
+
+¿La distribución del promedio de bateo es distinta para cada liga?
+```{r}
+ggplot(datos1, aes(x=BA))+
+  geom_histogram(aes(fill=League), alpha=0.5)+
+  labs(title="Distribución del promedio de bateo cambia de acuerdo a la liga",
+       x="Promedio de bateo",
+       fill = "Liga")+
+   scale_fill_brewer(palette = "Dark2")
+```
